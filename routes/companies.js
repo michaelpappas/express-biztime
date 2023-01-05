@@ -60,21 +60,40 @@ router.post("/companies", async function (req, res){
     Needs to be given JSON like: {name, description}
 
     Returns update company object: {company: {code, name, description}} */
-router.post("/companies", async function (req, res){
+router.put("/companies/:code", async function (req, res){
   debugger;
+  const code = req.params.code
   if (req.body === undefined) throw new BadRequestError();
-  const {code, name, description} = req.body;
-  const result = await db.query(
+  const {name, description} = req.body;
+  const results = await db.query(
     `UPDATE companies
-           SET code=$1,
-               name=$2
+           SET name=$2,
                description=$3
            WHERE code = $1
            RETURNING code, name, description`,
-    [code, name, description],
+    [code, name, description]
   );
   const company = results.rows[0]
+  if(company === undefined){throw new NotFoundError}
+
   return res.status(201).json({ company });
 })
+/** Deletes company.
 
+  Should return 404 if company cannot be found.
+
+  Returns {status: "deleted"} */
+router.delete("/companies/:code", async function (req, res){
+  debugger;
+  const code = req.params.code
+  const company = await db.query(
+    `SELECT code, name, description
+      FROM companies
+      WHERE code = $1`, [code]
+  )
+  if(company.rows[0] === undefined){throw new NotFoundError}
+  const results = await db.query(
+    `DELETE FROM companies WHERE code = $1`, [code]);
+  return res.json({status: "Deleted"})
+})
 module.exports = router;
